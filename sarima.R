@@ -53,7 +53,7 @@ model1 <- arima(europe_ts, order = c(0, 1, 2), seasonal = list(order=c(0, 1, 1),
 summary(model1)
 checkresiduals(model1)
 plot(forecast(model1, h=12))
-#Result: Pass, inside condifence interval, random residuals(Ljung-Box p-value = 0.2083), aic = 834.06
+#Result: Pass, inside confidence interval, random residuals(Ljung-Box p-value = 0.2083), aic = 834.06
 
 
 # ==== Second Fit Model ==== #
@@ -61,7 +61,7 @@ model2 <- arima(europe_ts, order = c(2, 1, 0), seasonal = list(order=c(1, 1, 0),
 summary(model2)
 checkresiduals(model2)
 plot(forecast(model2, h=12))
-#Result: (Not sure), outside condifence interval, random residuals(Ljung-Box p-value = 0.08392), aic = 843.1
+#Result: (Not sure), outside confidence interval, random residuals(Ljung-Box p-value = 0.08392), aic = 843.1
 
 
 # ==== Third Fit Model ==== #
@@ -69,7 +69,7 @@ model3 <- arima(europe_ts, order = c(2, 1, 0), seasonal = list(order=c(0, 1, 2),
 summary(model3)
 checkresiduals(model3)
 plot(forecast(model3, h=12))
-#Result: (Not sure), outside condifence interval, random residuals(Ljung-Box p-value = 0.1746), aic = 833.69
+#Result: (Not sure), outside confidence interval, random residuals(Ljung-Box p-value = 0.1746), aic = 833.69
 
 
 # ==== Fourth Fit Model ==== #
@@ -77,4 +77,14 @@ model4 <- arima(europe_ts, order = c(0, 1, 2), seasonal = list(order=c(0, 1, 2),
 summary(model4)
 checkresiduals(model4)
 plot(forecast(model4, h=12))
-#Result: Pass, inside condifence interval, random residuals(Ljung-Box p-value = 0.3042), aic = 833.54
+#Result: Pass, inside confidence interval, random residuals(Ljung-Box p-value = 0.3042), aic = 833.54
+
+
+
+# ==== Auto Arima Cheking ==== #
+auto <- auto.arima(europe_ts, ic="aic", trace=TRUE)
+summary(auto)
+checkresiduals(auto, lag=24)
+plot(forecast(auto, h=12))
+# Model found = Arima(1, 0, 2)(0, 1, 1)
+# AIC value = 836.97
