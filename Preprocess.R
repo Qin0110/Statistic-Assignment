@@ -25,3 +25,15 @@ plot(europe_ts,
      ylab = "Electricity Demand (TWh)",
      xlab = "Year",
      main = "Monthly Electricity Demand in Europe")
+
+# Split data by percentage
+library(forecast)
+
+train <- head(europe_ts, round(length(europe_ts) * 0.66))
+h <- length(europe_ts) - length(train)
+test <- tail(europe_ts, h)
+
+train
+test
+
+autoplot(train) + autolayer(test)
