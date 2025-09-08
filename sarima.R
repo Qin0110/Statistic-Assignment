@@ -96,7 +96,7 @@ accuracy(fc, test)
 #Result(Train set): Pass, inside confidence interval, random residuals(Ljung-Box p-value = 0.9144), aic = 536.69
 #Test result accuracy: RMSE Test set = 21.048186
 
-# ==== Auto Arima Cheking ==== #
+# ==== Auto Arima Checking ==== #
 auto <- auto.arima(train, ic="aic", trace=TRUE)
 summary(auto)
 checkresiduals(auto, lag=24)
