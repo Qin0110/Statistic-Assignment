@@ -8,7 +8,7 @@ europe <- rawData %>%
          Category == 'Electricity demand')
 
 europe <- europe %>%
-  select(Area, Date, Value)
+  select(Date, Value)
 
 View(europe)
 
