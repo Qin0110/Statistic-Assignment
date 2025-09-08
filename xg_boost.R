@@ -110,3 +110,5 @@ ggplot(plot_df, aes(x = Date, y = Value, color = DataType)) +
   ) +
   theme_minimal(base_size = 14) +
   guides(color = guide_legend(override.aes = list(linetype = c("solid", "solid")))) # Ensure legend lines are solid
+
+accuracy(xgb_pred, test$Value)
