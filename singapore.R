@@ -26,7 +26,7 @@ plot(sg_ts,
 # Split data by percentage
 library(forecast)
 
-train <- head(sg_ts, round(length(sg_ts) * 0.66))
+train <- head(sg_ts, round(length(sg_ts) * 0.67))
 h <- length(sg_ts) - length(train)
 test <- tail(sg_ts, h)
 
