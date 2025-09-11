@@ -1,76 +1,37 @@
 library(tseries)
 
-rawData <- read.csv("monthly_full_release_long_format.csv")
-library(dplyr)
-
-
-singapore <- rawData %>%
-  filter(Area == "Singapore",
-         Category == 'Electricity demand')
-
-singapore <- singapore %>%
-  select(Area, Date, Value)
-
-View(singapore)
-
-library(lubridate)
-singapore$Date <- as.Date(singapore$Date)
-start_year <- year(min(singapore$Date))
-start_month <- month(min(singapore$Date))
-
-singapore_ts <- ts(singapore$Value,
-                   start = c(start_year, start_month),
-                   frequency = 12)
-
-plot(singapore_ts,
-     ylab = "Electricity Demand (TWh)",
-     xlab = "Year",
-     main = "Monthly Electricity Demand in Singapore")
-
-# Split data by percentage
-library(forecast)
-
-train_singapore <- head(singapore_ts, round(length(singapore_ts) * 0.66))
-h <- length(singapore_ts) - length(train_singapore)
-test_singapore <- tail(singapore_ts, h)
-
-train_singapore
-test_singapore
-
-autoplot(train_singapore) + autolayer(test_singapore)
-
-
 
 # Check number of differencing
 #how many diference need to do
-ndiffs(train_singapore)
+ndiffs(train)
 #how many seasonal difference nddeed to do
-nsdiffs(train_singapore)
+nsdiffs(train)
 
 
 # 2row and 2column, fill matrix row by row (c(1,1,2,3) is location)
 layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
-plot(singapore_ts,xlab = "Year", ylab="Electricity Demand (TWh)", main="Monthly Electricity Demand in Singapora")
-acf(singapore_ts,lag.max=40)
-pacf(singapore_ts,lag.max=40)
+plot(sg_ts,xlab = "Year", ylab="Electricity Demand (TWh)", main="Monthly Electricity Demand in Singapora")
+acf(sg_ts,lag.max=40)
+pacf(sg_ts,lag.max=40)
 
 # want p < 0.05 only for non-seasonal
-adf.test(train_singapore)
+adf.test(train)
 # p-value = 0.01
 
 # first differencing (seasonal)
-z <- ts(diff(train_singapore, lag=12))
+z <- ts(diff(train, lag=12))
 #plot time series
-ts.plot(z,gpars=list(main= "First Differences", xlab="Year",
+ts.plot(z,gpars=list(main= "First Differences (Seasonal)", xlab="Year",
                      ylab="Electricity Demand (TWh)", lty=1))
 acf(z, main="z",lag.max=40)
 pacf(z, main="z",lag.max=40)
 adf.test(z)
 #p-value = 0.01
 
+
 #second differencing
 z2 <- ts(diff(z, lag=1))  
-ts.plot(z2,gpars=list(main= "Second Differences", xlab="Year"
+ts.plot(z2,gpars=list(main= "Second Differences (Non-Seasonal)", xlab="Year"
                       ,ylab="Electricity Demand (TWh)",lty=1))
 acf(z2, main="z2",lag.max=40)
 pacf(z2, main="z2",lag.max=40)
@@ -78,18 +39,19 @@ adf.test(z2)
 #p-value = 0.01
 
 
+
 #arima  (0,1,1) (0) PACF (1) differencing one time       (1) ACF lag 1 signifincance
 #s      (0,1,1) (0 PACF) (seaonal differencing one time) (1 seasonal at acf)
-fit_singapore <- arima(train_singapore, order=c(0,1,1), seasonal=list(order =c(0,1,1), period=12)) 
+fit_singapore <- arima(train, order=c(0,1,1), seasonal=list(order =c(0,1,1), period=12)) 
 summary(fit_singapore)
 #p value > 0.05 is gud model, no autocorelation
 checkresiduals(fit_singapore)
 
-fr <- forecast(fit_singapore, h=12*4)
+fr <- forecast(fit_singapore, h=length(test))
 layout(matrix(c(1,1)))
 plot(fr)
-lines(test_singapore, col="turquoise2")
-accuracy(fr, test_singapore)
+lines(test, col="turquoise2")
+accuracy(fr, test)
 # aic = -266.37
 # p-value = 0.2595
 #                       ME      RMSE        MAE        MPE     MAPE      MASE        ACF1 Theil's U
@@ -98,17 +60,32 @@ accuracy(fr, test_singapore)
 # p+q+P+Q = 2
 
 
+#Second model  (NOT SURE YET)
+#AR(2) ARSEASONAL(1)
+fit_singapore2 <- arima(train, 
+                        order=c(2,1,0), 
+                        seasonal=list(order =c(0,1,1), period=12)) 
+summary(fit_singapore2)
+checkresiduals(fit_singapore2)
+
+fr2 <- forecast(fit_singapore2, h=length(test))
+layout(matrix(c(1,1)))
+plot(fr2)
+lines(test, col="turquoise2")
+accuracy(fr2, test)
+
+
 
 #Auto ARIMA
 library(forecast)
-fit_singapore2 <- auto.arima(train_singapore, ic="aic", trace=TRUE)
+fit_singapore3 <- auto.arima(train, ic="aic", trace=TRUE)
 summary(fit_singapore2)
-checkresiduals(fit_singapore2)
-fr <- forecast(fit_singapore2, h=12*4)
+checkresiduals(fit_singapore3)
+fr3 <- forecast(fit_singapore3, h=length(test))
 layout(matrix(c(1,1)))
-plot(fr)
-lines(test_singapore, col="turquoise2")
-accuracy(fr, test_singapore)
+plot(fr3)
+lines(test, col="turquoise2")
+accuracy(fr3, test)
 # auto ARIMA(0,1,1)(0,1,2)[12] 
 # AIC=-267.55
 # p-value = 0.5581
@@ -119,11 +96,12 @@ accuracy(fr, test_singapore)
 
 
 ### conclusion
-# arima(train_singapore, order=c(0,1,1), seasonal=list(order =c(0,1,1), period=12)) better
-# both is pass the residual which p value > 0.05
+# arima(train, order=c(0,1,1), seasonal=list(order =c(0,1,1), period=12)) better
+# All 3 passed the residual which p value > 0.05
 # although RMSE auto arima is show a slightly lower RMSE than manual arima, but
-# manual arima
+# manual arima (0,1,1) (0,1,1)
 #   - have lower aic than auto arima 
 #   - (p+q+P+Q) parameter manual arima only 2 while auto arima is 3, which means manual arima is more simpler with the similiar accuracy
-
+# (1,1,0),(0,1,1) have worse rmse compared to the other two model
+#P-value is smaller than both of the model too
 
