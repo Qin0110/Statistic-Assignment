@@ -1,4 +1,61 @@
+
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(forecast)
 library(tseries)
+rawData <- read.csv("co2_mm_mlo.csv", 
+                    header = TRUE, 
+                    comment.char = "#")
+
+# Check the first rows and column names
+head(rawData)
+colnames(rawData)
+
+rawData <- rawData %>%
+  select(year, month, average)
+
+rawData$Date <- as.Date(paste(rawData$year, rawData$month, "01", sep = "-"))
+
+start_year <- 2010
+start_month <- 1
+
+co2_ts <- ts(rawData$average,
+             start = c(1958, 3),   
+             frequency = 12)
+
+co2_ts_2010 <- window(co2_ts, start = c(start_year, start_month))
+plot(co2_ts_2010,
+     ylab = "CO₂ (ppm)",
+     xlab = "Year",
+     main = "Monthly CO₂ Concentration at Mauna Loa (2010 onwards)")
+
+
+train <- head(co2_ts_2010, round(length(co2_ts_2010) * 0.7))
+h <- length(co2_ts_2010) - length(train)
+test <- tail(co2_ts_2010, h)
+
+
+train
+test
+
+
+# Plot train vs test
+autoplot(train) + 
+  autolayer(test, series = "Test", color = "red") +
+  labs(title = "Train/Test Split of Electricity Consumption",
+       y = "Electricity Consumption (TWh)", x = "Year")
+
+
+
+
+
+----------------------------------------------------------------------------------------------------
+  
+  
+  
+  
+  library(tseries)
 
 
 # Check number of differencing
@@ -26,7 +83,7 @@ ts.plot(z,gpars=list(main= "First Differences (Seasonal)", xlab="Year",
 acf(z, main="z",lag.max=40)
 pacf(z, main="z",lag.max=40)
 adf.test(z)
-#p-value = 0.01
+#p-value = 0.1437
 
 
 #second differencing
@@ -52,19 +109,19 @@ layout(matrix(c(1,1)))
 plot(fr)
 lines(test, col="turquoise2")
 accuracy(fr, test)
-
-# p-value = 0.5471
-#ME      RMSE       MAE         MPE       MAPE      MASE      ACF1 Theil's U
-#Training set 0.01212178 0.3545717 0.2654615 0.002873610 0.06614668 0.1105637 0.1232532        NA
-#Test set     0.04046994 0.6496957 0.5120617 0.008750748 0.12125558 0.2132718 0.8035594 0.4869918
+# aic = 103.7
+# p-value = 0.5513
+#                      ME      RMSE       MAE         MPE       MAPE      MASE      ACF1 Theil's U
+#Training set 0.009949836 0.3460144 0.2590066 0.002351138 0.06446156 0.1074196 0.1234335        NA
+#Test set     0.183010099 0.7311082 0.5839001 0.042337332 0.13796737 0.2421650 0.8123295 0.5494502
 # p+q+P+Q = 2
 
 
 #Second model  
 #AR(1) MASEASONAL(1)
 fit_co22 <- arima(train, 
-                        order=c(1,1,0), 
-                        seasonal=list(order =c(0,1,1), period=12)) 
+                  order=c(1,1,0), 
+                  seasonal=list(order =c(0,1,1), period=12)) 
 summary(fit_co22)
 checkresiduals(fit_co22)
 
@@ -73,7 +130,11 @@ layout(matrix(c(1,1)))
 plot(fr2)
 lines(test, col="turquoise2")
 accuracy(fr2, test)
-
+# aic = 107.87
+# p-value = 0.4756
+#                        ME      RMSE       MAE           MPE       MAPE      MASE       ACF1 Theil's U
+#Training set -0.0004559044 0.3545363 0.2705150 -0.0002249015 0.06731026 0.1121926 0.05329466        NA
+#Test set      0.2519680055 0.7500253 0.5968222  0.0587113131 0.14096006 0.2475242 0.80776155 0.5633874
 
 
 #Auto ARIMA
@@ -88,11 +149,11 @@ lines(test, col="turquoise2")
 accuracy(fr3, test)
 
 # auto ARIMA(0,1,1)(0,1,1)[12] 
-# AIC=107.48
-# p-value = 0.5471
-#ME      RMSE       MAE         MPE       MAPE      MASE      ACF1 Theil's U
-#Training set 0.01212178 0.3545717 0.2654615 0.002873610 0.06614668 0.1105637 0.1232532        NA
-#Test set     0.04046994 0.6496957 0.5120617 0.008750748 0.12125558 0.2132718 0.8035594 0.4869918
+# aic = 107.87
+# p-value = 0.5513
+#                     ME      RMSE       MAE         MPE       MAPE      MASE      ACF1 Theil's U
+#Training set 0.009949836 0.3460144 0.2590066 0.002351138 0.06446156 0.1074196 0.1234335        NA
+#Test set     0.183010099 0.7311082 0.5839001 0.042337332 0.13796737 0.2421650 0.8123295 0.5494502
 # p+q+P+Q = 2
 
 
