@@ -31,7 +31,7 @@ plot(co2_ts_2010,
      main = "Monthly CO₂ Concentration at Mauna Loa (2010 onwards)")
 
 
-train <- head(co2_ts_2010, round(length(co2_ts_2010) * 0.66))
+train <- head(co2_ts_2010, round(length(co2_ts_2010) * 0.7))
 h <- length(co2_ts_2010) - length(train)
 test <- tail(co2_ts_2010, h)
 
