@@ -1,117 +1,102 @@
-library(forecast)
 library(tseries)
 
-#p-value default already < 0.05, reject H null, stationary
-layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
-plot(train, ylab="TWH Electricity", main="Electricity Demand")
-acf(as.numeric(train), lag.max = 48, main = "ACF (lags in months)")
-pacf(as.numeric(train), lag.max = 48, main = "PACF (lags in months)")
-adf.test(train)
 
+# Check number of differencing
+#how many diference need to do
 ndiffs(train)
+#how many seasonal difference nddeed to do
 nsdiffs(train)
-# getting the result of non-seasonal diff = 0, seasonal diff = 1
-# but after differencing seasonal, p-value > 0.05
 
-z <- ts(diff(train, lag=12)) # lag=12, seasonal differences
-ts.plot(z,gpars=list(main= "First (Seasonal) Differences", xlab="Week",
-                     ylab="Sales", lty=1))
 
-acf(z, main="z", lag.max=40)
-pacf(z, main="z", lag.max=40)
-adf.test(z) #Result getting p-value > 0.05
-# Non-stationary, perform regular differencing
+# 2row and 2column, fill matrix row by row (c(1,1,2,3) is location)
+layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
+plot(co2_ts_2010,xlab = "Year", ylab="Change in CO₂ (ppm)", main="Monthly Change in CO₂ (ppm)")
+acf(co2_ts_2010,lag.max=40)
+pacf(co2_ts_2010,lag.max=40)
 
-# Second differncing
-z2 <- ts(diff(z, lag=1)) # lag=12, seasonal differences
-ts.plot(z,gpars=list(main= "First (non-seasonal) Differences", xlab="Week",
-                     ylab="Sales", lty=1))
+# want p < 0.05 only for non-seasonal
+adf.test(train)
+# p-value = 0.01
 
-acf(z2, main="z2", lag.max=40)
-pacf(z2, main="z2", lag.max=40)
+# first differencing (seasonal)
+z <- ts(diff(train, lag=12))
+#plot time series
+ts.plot(z,gpars=list(main= "First Differences (Seasonal)", xlab="Year",
+                     ylab="Change in CO₂ (ppm)", lty=1))
+acf(z, main="z",lag.max=40)
+pacf(z, main="z",lag.max=40)
+adf.test(z)
+#p-value = 0.01
+
+
+#second differencing
+z2 <- ts(diff(z, lag=1))  
+ts.plot(z2,gpars=list(main= "Second Differences (Non-Seasonal)", xlab="Year"
+                      ,ylab="Change in CO₂ (ppm)",lty=1))
+acf(z2, main="z2",lag.max=40)
+pacf(z2, main="z2",lag.max=40)
 adf.test(z2)
-#Result getting p-value < 0.05, stationary
+#p-value = 0.01
 
 
 
-# # Residual p value < 0.05, not-random
-# model1 <- arima(europe_ts, order = c(0, 0, 0), seasonal = list(order=c(0, 1, 1), period=12))
-# summary(model1)
-# checkresiduals(model1)
-# 
-# plot(forecast(model1, h=12))
+#arima  (0,1,1) (0) PACF (1) differencing one time       (1) ACF lag 1 signifincance
+#s      (0,1,1) (0 PACF) (seaonal differencing one time) (1 seasonal at acf)
+fit_co2 <- arima(train, order=c(0,1,1), seasonal=list(order =c(0,1,1), period=12)) 
+summary(fit_co2)
+#p value > 0.05 is gud model, no autocorelation
+checkresiduals(fit_co2)
 
-## ===================================== Model Fitting ===================================== ##  
-#Importance: 
-#Ljung-box test, p-value > 0.05 = randomness in residuals
-#ADF test, p-value < 0.05 = stationary
-
-
-# ==== First Fit Model ==== #
-# Residual p value < 0.05, not-random
-model1 <- arima(train, order = c(0, 1, 2), seasonal = list(order=c(0, 1, 1), period=12))
-summary(model1)
-checkresiduals(model1)
-fc <- forecast(model1, h = h)
-plot(fc)
+fr <- forecast(fit_co2, h=length(test))
+layout(matrix(c(1,1)))
+plot(fr)
 lines(test, col="turquoise2")
-accuracy(fc, test)
-#Result(Full set): Pass, inside confidence interval, random residuals(Ljung-Box p-value = 0.2083), aic = 834.06
-#Result(Train set): Pass, inside confidence interval, random residuals(Ljung-Box p-value = 0.7083), aic = 536.59
-#Test result accuracy: RMSE Test set = 23.849848
+accuracy(fr, test)
 
-# ==== Second Fit Model ==== #
-model2 <- arima(train, order = c(2, 1, 0), seasonal = list(order=c(1, 1, 0), period=12))
-summary(model2)
-checkresiduals(model2)
-fc <- forecast(model2, h = h)
-plot(fc)
-lines(test, col = "turquoise2")
-accuracy(fc, test)
-#Result(Full set): (Not sure), outside confidence interval, random residuals(Ljung-Box p-value = 0.08392), aic = 843.1
-#Result(Train set): (Not sure), outside confidence interval, random residuals(Ljung-Box p-value = 0.1449), aic = 543.63
-#Test result accuracy: RMSE Test set = 35.859274
-
-# ==== Third Fit Model ==== #
-model3 <- arima(train, order = c(2, 1, 0), seasonal = list(order=c(0, 1, 2), period=12))
-summary(model3)
-checkresiduals(model3)
-fc <- forecast(model3, h = h)
-plot(fc)
-lines(test, col = "turquoise2")
-accuracy(fc, test)
-#Result: (Not sure), outside confidence interval, random residuals(Ljung-Box p-value = 0.1746), aic = 833.69
-#Result(Train set): Pass, a bit outside confidence interval, random residuals(Ljung-Box p-value = 0.4906), aic = 538.36
-#Test result accuracy: RMSE Test set = 23.158305
-
-# ==== Fourth Fit Model ==== #
-model4 <- arima(train, order = c(0, 1, 2), seasonal = list(order=c(0, 1, 2), period=12))
-summary(model4)
-checkresiduals(model4)
-fc <- forecast(model4, h = h)
-plot(fc)
-lines(test, col = "turquoise2")
-accuracy(fc, test)
-#Result: Pass, inside confidence interval, random residuals(Ljung-Box p-value = 0.3042), aic = 833.54
-#Result(Train set): Pass, inside confidence interval, random residuals(Ljung-Box p-value = 0.9144), aic = 536.69
-#Test result accuracy: RMSE Test set = 21.048186
-
-# ==== Auto Arima Checking ==== #
-auto <- auto.arima(train, ic="aic", trace=TRUE)
-summary(auto)
-checkresiduals(auto, lag=24)
-
-fc <- forecast(auto, h = h)
-plot(fc)
-lines(test, col = "turquoise2")
-accuracy(fc, test)
-# Model found(Full set) = Arima(1, 0, 2)(0, 1, 1)(12)
-# AIC value = 836.97
-
-# Train set = Arima(1,0,0)(1,1,1)(12)
-# AIC = 544.73
-# Test set RMSE = 9.487547 
+# p-value = 0.5471
+#ME      RMSE       MAE         MPE       MAPE      MASE      ACF1 Theil's U
+#Training set 0.01212178 0.3545717 0.2654615 0.002873610 0.06614668 0.1105637 0.1232532        NA
+#Test set     0.04046994 0.6496957 0.5120617 0.008750748 0.12125558 0.2132718 0.8035594 0.4869918
+# p+q+P+Q = 2
 
 
-## ==== Best Model ==== ##
-# Question: Using RMSE as performance tracking or AIC
+#Second model  
+#AR(1) MASEASONAL(1)
+fit_co22 <- arima(train, 
+                        order=c(1,1,0), 
+                        seasonal=list(order =c(0,1,1), period=12)) 
+summary(fit_co22)
+checkresiduals(fit_co22)
+
+fr2 <- forecast(fit_co22, h=length(test))
+layout(matrix(c(1,1)))
+plot(fr2)
+lines(test, col="turquoise2")
+accuracy(fr2, test)
+
+
+
+#Auto ARIMA
+library(forecast)
+fit_co23 <- auto.arima(train, ic="aic", trace=TRUE)
+summary(fit_co22)
+checkresiduals(fit_co23)
+fr3 <- forecast(fit_co23, h=length(test))
+layout(matrix(c(1,1)))
+plot(fr3)
+lines(test, col="turquoise2")
+accuracy(fr3, test)
+
+# auto ARIMA(0,1,1)(0,1,1)[12] 
+# AIC=107.48
+# p-value = 0.5471
+#ME      RMSE       MAE         MPE       MAPE      MASE      ACF1 Theil's U
+#Training set 0.01212178 0.3545717 0.2654615 0.002873610 0.06614668 0.1105637 0.1232532        NA
+#Test set     0.04046994 0.6496957 0.5120617 0.008750748 0.12125558 0.2132718 0.8035594 0.4869918
+# p+q+P+Q = 2
+
+
+### conclusion
+# arima(train, order=c(0,1,1), seasonal=list(order =c(0,1,1), period=12))
+# All 3 passed the residual which p value > 0.05
+# (1,1,0),(0,1,1) have worse rmse compared to the other two model
