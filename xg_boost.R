@@ -4,19 +4,15 @@ library(dplyr)
 library(caret)
 library(ggplot2)
 
-head(europe)
+head(rawData)
 
-# Mutate column since xg_boost doesn't recognize date column well
-df <- europe %>%
-  arrange(Date) %>%
-  mutate(
-    month = month(Date),
-    year = year(Date)
-  )
+df <- rawData %>%
+  filter(year >= start_year)
 
-df
+# df <- df %>%
+#   select(-Date)
 
-train <- head(df, round(nrow(df) * 0.66))
+train <- head(df, round(nrow(df) * 0.7))
 df_h <- nrow(df) - nrow(train)
 test <- tail(df, df_h)
 
@@ -30,7 +26,7 @@ test <- tail(df, df_h)
 # y_train <- train$Value
 
 features <- c("month", "year")
-target <- "Value"
+target <- "average"
 
 # Fit in xgBoost using caret
 xgb_trcontrol <- trainControl(
@@ -68,7 +64,7 @@ xgb_pred <- xgb_model %>% predict(newdata = test[, features])
 
 results_df <- data.frame(
   Date = test$Date,        
-  Actual = test$Value,     
+  Actual = test$average,     
   Forecast = xgb_pred   
 )
 
@@ -79,7 +75,7 @@ historical_df <- df %>%
 # This will contain the dates from the test set and your predictions
 forecast_df <- data.frame(
   Date = test$Date,
-  Value = xgb_pred, # The predictions from your xgb_model
+  average = xgb_pred, # The predictions from your xgb_model
   DataType = "Forecast"
 )
 
@@ -87,7 +83,7 @@ forecast_df <- data.frame(
 plot_df <- bind_rows(historical_df, forecast_df)
 
 # 4. Create the plot
-ggplot(plot_df, aes(x = Date, y = Value, color = DataType)) +
+ggplot(plot_df, aes(x = Date, y = average, color = DataType)) +
   
   # Plot both historical and forecast lines
   geom_line(size = 1) +
@@ -96,8 +92,8 @@ ggplot(plot_df, aes(x = Date, y = Value, color = DataType)) +
   geom_vline(xintercept = min(test$Date), linetype = "dashed", color = "blue", size = 1) +
   
   # Add text to label the sections
-  annotate("text", x = train$Date[round(nrow(train)*0.5)], y = max(df$Value), label = "Training Data", color = "black") +
-  annotate("text", x = test$Date[round(nrow(test)*0.5)], y = max(df$Value), label = "Test Data", color = "black") +
+  annotate("text", x = train$Date[round(nrow(train)*0.5)], y = max(df$average), label = "Training Data", color = "black") +
+  annotate("text", x = test$Date[round(nrow(test)*0.5)], y = max(df$average), label = "Test Data", color = "black") +
   
   # 5. Customize the plot's appearance
   scale_color_manual(values = c("Historical" = "black", "Forecast" = "turquoise2")) +
@@ -111,4 +107,4 @@ ggplot(plot_df, aes(x = Date, y = Value, color = DataType)) +
   theme_minimal(base_size = 14) +
   guides(color = guide_legend(override.aes = list(linetype = c("solid", "solid")))) # Ensure legend lines are solid
 
-accuracy(xgb_pred, test$Value)
+accuracy(xgb_pred, test$average)
