@@ -1,4 +1,3 @@
-
 library(dplyr)
 library(lubridate)
 library(ggplot2)
@@ -29,7 +28,7 @@ plot(co2_ts_2010,
      ylab = "CO₂ (ppm)",
      xlab = "Year",
      main = "Monthly CO₂ Concentration at Mauna Loa (2010 onwards)")
-
+length(co2_ts_2010)
 
 train <- head(co2_ts_2010, round(length(co2_ts_2010) * 0.7))
 h <- length(co2_ts_2010) - length(train)
