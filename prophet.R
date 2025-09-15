@@ -2,7 +2,6 @@ library(dplyr)
 library(prophet)
 library(forecast)
 library(ggplot2)
-library(forecast)
 library(lubridate)
 
 #data preprocessing
