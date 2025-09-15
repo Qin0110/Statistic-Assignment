@@ -5,90 +5,79 @@ library(ggplot2)
 library(forecast)
 library(lubridate)
 
-
 #data preprocessing
 train_df <- data.frame(ds = seq.POSIXt(from = as.POSIXct(paste0(start_year, "-", start_month, "-01")),by = "month",length.out = length(train)),y = as.numeric(train))
 test_df <- data.frame(ds = seq.POSIXt(from = max(train_df$ds) + 1, by = "month",length.out = length(test)),y = as.numeric(test))
 
 
-# Hyperparameter tuning
-# param_grid <- expand.grid(
-#   changepoint_prior_scale = c(0.05, 0.1, 0.5),
-#   seasonality_prior_scale = c(0.001, 0.01, 1.0, 5.0, 10.0),
-#   stringsAsFactors = FALSE
-# )
-# 
-# results <- data.frame(
-#   changepoint_prior_scale = numeric(),
-#   seasonality_prior_scale = numeric(),
-#   seasonality_mode        = character(),
-#   rmse = numeric(),
-#   mae  = numeric(),
-#   mape = numeric(),
-#   stringsAsFactors = FALSE
-# )
-# 
-# for (i in 1:nrow(param_grid)) {
-#   params <- param_grid[i, ]
-# 
-# m <- prophet(
-#   df = train_df,
-#   changepoint.prior.scale = params$changepoint_prior_scale,
-#   seasonality.prior.scale = params$seasonality_prior_scale,
-#   weekly.seasonality      = FALSE,
-#   yearly.seasonality      = TRUE,
-#   daily.seasonality       = FALSE,
-#   verbose = FALSE
-# )
-# 
-# # Cross validation: since monthly data, use horizon = 12 months
-# df_cv <- cross_validation(
-#   m,
-#   initial = as.difftime(1095, units = "days"),
-#   period  = as.difftime(365,  units = "days"),
-#   horizon = as.difftime(365,  units = "days")
-# )
-# 
-# df_p <- performance_metrics(df_cv, rolling_window = 1)
-# 
-# results <- rbind(
-#   results,
-#   data.frame(
-#     changepoint_prior_scale = params$changepoint_prior_scale,
-#     seasonality_prior_scale = params$seasonality_prior_scale,
-#     rmse = mean(df_p$rmse, na.rm = TRUE),
-#     mae  = mean(df_p$mae, na.rm = TRUE),
-#     mape = mean(df_p$mape, na.rm = TRUE),
-#     stringsAsFactors = FALSE
-# ))}
-# 
-# # rank by RMSE
-# results <- results %>% arrange(rmse)
-# print(head(results, 10))
-# 
-# # best parameter set
-# best_params <- results %>% slice(1)
-# print(best_params)
-# 
-# # final model using best params
-# model <- prophet(
-#   df = train_df,
-#   changepoint.prior.scale = best_params$changepoint_prior_scale,
-#   seasonality.prior.scale = best_params$seasonality_prior_scale,
-#   weekly.seasonality      = FALSE,
-#   yearly.seasonality      = TRUE,
-#   daily.seasonality       = FALSE
-# )
+# hyperparameter tuning
+param_grid <- expand.grid(
+  changepoint_prior_scale = c(0.05, 0.1, 0.5),
+  seasonality_prior_scale = c(0.001, 0.01, 1.0, 5.0, 10.0),
+  stringsAsFactors = FALSE
+)
 
-# # 
+results <- data.frame(
+  changepoint_prior_scale = numeric(),
+  seasonality_prior_scale = numeric(),
+  seasonality_mode        = character(),
+  rmse = numeric(),
+  mae  = numeric(),
+  mape = numeric(),
+  stringsAsFactors = FALSE
+)
+
+for (i in 1:nrow(param_grid)) {
+  params <- param_grid[i, ]
+
+m <- prophet(
+  df = train_df,
+  changepoint.prior.scale = params$changepoint_prior_scale,
+  seasonality.prior.scale = params$seasonality_prior_scale,
+  weekly.seasonality      = FALSE,
+  yearly.seasonality      = TRUE,
+  daily.seasonality       = FALSE,
+  verbose = FALSE
+)
+
+# Cross validation: since monthly data, use horizon = 12 months
+df_cv <- cross_validation(
+  m,
+  initial = as.difftime(1095, units = "days"),
+  period  = as.difftime(365,  units = "days"),
+  horizon = as.difftime(365,  units = "days")
+)
+
+df_p <- performance_metrics(df_cv, rolling_window = 1)
+
+results <- rbind(
+  results,
+  data.frame(
+    changepoint_prior_scale = params$changepoint_prior_scale,
+    seasonality_prior_scale = params$seasonality_prior_scale,
+    rmse = mean(df_p$rmse, na.rm = TRUE),
+    mae  = mean(df_p$mae, na.rm = TRUE),
+    mape = mean(df_p$mape, na.rm = TRUE),
+    stringsAsFactors = FALSE
+))}
+
+# rank by RMSE
+results <- results %>% arrange(rmse)
+print(head(results, 10))
+
+# best parameter set
+best_params <- results %>% slice(1)
+print(best_params)
+
+# final model using best params
 model <- prophet(
-  train_df,
+  df = train_df,
   seasonality.mode = 'additive',
-  seasonality.prior.scale = 0.001,
-  weekly.seasonality = FALSE,
-  daily.seasonality = FALSE,
-  yearly.seasonality = TRUE,
-  changepoint.prior.scale = 0.05,
+  changepoint.prior.scale = best_params$changepoint_prior_scale,
+  seasonality.prior.scale = best_params$seasonality_prior_scale,
+  weekly.seasonality      = FALSE,
+  yearly.seasonality      = TRUE,
+  daily.seasonality       = FALSE
 )
 
 #future = total data of train + test
@@ -97,6 +86,7 @@ future$ds <- as.POSIXct(future$ds)
 
 forecast <- predict(model, future)
 forecast$ds <- as.POSIXct(forecast$ds)
+
 
 #plot graph
 p <- ggplot() +
@@ -130,7 +120,6 @@ train_res_ts <- ts(
 # plot ACF of residuals
 Acf(train_res_ts, lag.max = 40, main = "ACF of Training Residuals")
 
-
 checkresiduals(train_res_ts, lag = 40)
 
 train_actual_ts <- ts(
@@ -138,7 +127,6 @@ train_actual_ts <- ts(
   frequency = 12,
   start = c(year(min(train_df$ds)), month(min(train_df$ds)))
 )
-
 
 test_actual_ts <- ts(
   test_df$y, 
